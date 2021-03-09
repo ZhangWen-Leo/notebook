@@ -1,0 +1,321 @@
+# ES6
+
+1. 类
+2. 模块化
+3. 箭头函数
+4. 函数参数默认值
+5. 模板字符串
+6. 解构赋值
+7. 延展操作符（展开操作符）
+8. 对象属性简写
+9. Promise
+10. let和const
+
+## 1. 类
+
+```javascript
+// 用ES5还原
+```
+
+## 2. 模块化
+
+ES6将一个文件视为一个模块  
+使用`import`和`export`来进行模块信息的导入和导出
+
+## 3. 箭头函数
+
+不创建自己独立的执行上下文，所以this与周围指向一致
+
+### ！注意！
+
+箭头函数和bind，每次被执行都返回的是一个新的函数引用，因此如果还需要函数引用做一些其他事，那么必须自己保存这个引用
++ 错误示例：
+```javascript
+class PauseMenu extends React.Component{
+    componentWillMount(){
+        AppStateIOS.addEventListener('change', this.onAppPaused.bind(this));
+    }
+    componentWillUnmount(){
+        AppStateIOS.removeEventListener('change', this.onAppPaused.bind(this));
+    }
+    onAppPaused(event){
+    }
+}
+```
++ 正确的做法
+```javascript
+class PauseMenu extends React.Component{
+    constructor(props){
+        super(props);
+        this._onAppPaused = this.onAppPaused.bind(this);
+    }
+    componentWillMount(){
+        AppStateIOS.addEventListener('change', this._onAppPaused);
+    }
+    componentWillUnmount(){
+        AppStateIOS.removeEventListener('change', this._onAppPaused);
+    }
+    onAppPaused(event){
+    }
+}
+```
++ 正确的做法2：
+```javascript
+class PauseMenu extends React.Component{
+    componentWillMount(){
+        AppStateIOS.addEventListener('change', this.onAppPaused);
+    }
+    componentWillUnmount(){
+        AppStateIOS.removeEventListener('change', this.onAppPaused);
+    }
+    onAppPaused = (event) => {
+        //把函数直接作为一个arrow function的属性来定义，初始化的时候就绑定好了this指针
+    }
+}
+```
+
+## 4. 函数参数默认值
+
+```javascript
+function foo(height = 50, color = 'red')
+{
+   // TODO
+}
+```
+
+### ！注意！
+
+这样写一般没问题，但当实参为布尔值false时，就会出问题了，例如：
+```javascript
+foo(0, "")
+```
+此处0为Number中的false，“”为String中的false，函数实际接受的参数为
+```javascript
+height = 50;
+color = 'red';
+```
+
+## 5. 模板字符串
+
+- ES5写法：
+```javascript
+var name = 'Your name is ' + first + ' ' + last + '.'
+```
+- ES6写法：
+```javascript
+var name = `Your name is ${first} ${last}.`
+```
+
+## 6. 解构赋值
+
+解构赋值语法是JavaScript的一种表达式，可以方便的从数组或者对象中快速提取值赋给定义的变量。
+
+### 解构赋值-获取数组中的值
+
+- 普通用法
+```javascript
+var foo = ["one", "two", "three", "four"];
+
+var [one, two, three] = foo;
+console.log(one); // "one"
+console.log(two); // "two"
+console.log(three); // "three"
+
+//如果你要忽略某些值，你可以按照下面的写法获取你想要的值
+var [first, , , last] = foo;
+console.log(first); // "one"
+console.log(last); // "four"
+
+//你也可以这样写
+var a, b; //先声明变量
+
+[a, b] = [1, 2];
+console.log(a); // 1
+console.log(b); // 2
+```
+
+- 添加默认值
+```javascript
+var a, b;
+
+[a=5, b=7] = [1];
+console.log(a); // 1
+console.log(b); // 7
+```
+
+- 进行变量值的交换
+```javascript
+var a = 1;
+var b = 3;
+
+[a, b] = [b, a];
+console.log(a); // 3
+console.log(b); // 1
+```
+
+### 结构赋值-获取对象中的值
+
+- 用法
+```javascript
+const student = {
+  name:'Ming',
+  age:'18',
+  city:'Shanghai'  
+};
+
+const {name,age,city} = student;
+console.log(name); // "Ming"
+console.log(age); // "18"
+console.log(city); // "Shanghai"
+```
+
+## 7. 延展操作符`...`
+
+延展操作符`...`可以在函数调用/数组构造时, 将数组表达式或者string在语法层面展开；还可以在构造对象时, 将对象表达式按key-value的方式展开。
+
+### 延展操作符-语法
+
+- 函数调用
+```javascript
+myFunction(...iterableObj);
+```
+- 数组构造或字符串
+```javascript
+[...iterableObj, '4', ...'hello', 6];
+```
+- 对象拷贝（ECMAScript 2018规范新增特性）
+```javascript
+var obj1 = { foo: 'bar', x: 42 };
+var obj2 = { foo: 'baz', y: 13 };
+
+var clonedObj = { ...obj1 };
+// 克隆后的对象: { foo: "bar", x: 42 }
+
+var mergedObj = { ...obj1, ...obj2 };
+// 合并后的对象: { foo: "baz", x: 42, y: 13 }
+```
+
+### 延展操作符-应用场景
+
+```javascript
+function sum(x, y, z) {
+  return x + y + z;
+}
+const numbers = [1, 2, 3];
+
+//不使用延展操作符
+console.log(sum.apply(null, numbers));
+
+//使用延展操作符
+console.log(sum(...numbers));// 6
+```
+
+### 延展操作符-构造数组
+
+- 构造
+```javascript
+const stuendts = ['Jine','Tom']; 
+const persons = ['Tony',... stuendts,'Aaron','Anna'];
+conslog.log(persions)// ["Tony", "Jine", "Tom", "Aaron", "Anna"]
+```
+- 数组拷贝
+```javascript
+var arr = [1, 2, 3];
+var arr2 = [...arr]; // 等同于 arr.slice()
+arr2.push(4); 
+console.log(arr2)//[1, 2, 3, 4]
+```
+- 展开语法和Object.assign() 行为一致, 执行的都是浅拷贝(只遍历一层)
+```javascript
+var arr1 = [0, 1, 2];
+var arr2 = [3, 4, 5];
+var arr3 = [...arr1, ...arr2];// 将 arr2 中所有元素附加到 arr1 后面并返回
+//等同于
+var arr4 = arr1.concat(arr2);
+```
+
+### 延展操作符-React应用
+
+- 用法
+```javascript
+const params = {
+    name: 'Jine',
+    age: 21
+}
+<CustomComponent {...params} />
+// 等同于
+<CustomComponent name ='Jine' age ={21} />
+```
+- 与解构赋值一起使用
+```javascript
+var params = {
+    name: '123',
+    title: '456',
+    type: 'aaa'
+}
+
+var { type, ...other } = params;
+
+<CustomComponent type='normal' number={2} {...other} />
+//等同于
+<CustomComponent type='normal' number={2} name='123' title='456' />
+```
+
+## 8. 对象属性简写
+
+- 不使用ES6
+```javascript
+const name='Ming',age='18',city='Shanghai';
+   
+const student = {
+    name:name,
+    age:age,
+    city:city
+};
+console.log(student);//{name: "Ming", age: "18", city: "Shanghai"}
+```
+- 使用ES6
+```javascript
+const name='Ming',age='18',city='Shanghai';
+  
+const student = {
+    name,
+    age,
+    city
+};
+console.log(student);//{name: "Ming", age: "18", city: "Shanghai"}
+```
+
+## 9. Promise
+
+- 不使用ES6
+```javascript
+setTimeout(function()
+{
+    console.log('Hello'); // 1秒后输出"Hello"
+    setTimeout(function()
+    {
+        console.log('Hi'); // 2秒后输出"Hi"
+    }, 1000);
+}, 1000);
+```
+- 使用ES6
+```javascript
+var waitSecond = new Promise(function(resolve, reject)
+{
+    setTimeout(resolve, 1000);
+});
+
+waitSecond
+    .then(function()
+    {
+      console.log("Hello"); // 1秒后输出"Hello"
+      return waitSecond;
+    })
+    .then(function()
+    {
+        console.log("Hi"); // 2秒后输出"Hi"
+    });
+```
+
+## 10. 支持let和const
