@@ -11,16 +11,13 @@
 
 ```html
 <html lang="en">
-<body>
-
-<p id="intro">Hello World!</p>
-
-<script>
-    const txt = document.getElementById("intro").innerHTML;
-    document.write(txt);
-</script>
-
-</body>
+    <body>
+        <p id="intro">Hello World!</p>
+        <script>
+            const txt = document.getElementById("intro").innerHTML;
+            document.write(txt);
+        </script>
+    </body>
 </html>
 ```
 
