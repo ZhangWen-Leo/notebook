@@ -558,3 +558,4 @@ BBromise.race = promises => {
 ## 参考链接
 
 1. [浏览器工作原理(19) - 使用promise， 告别回调函数](https://blog.csdn.net/u013448372/article/details/108674747)
+2. [手撕遵循 Promise/A+ 规范的 Promise](https://blog.csdn.net/weixin_34289744/article/details/91390169)
