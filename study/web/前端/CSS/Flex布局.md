@@ -147,7 +147,7 @@ Webkit 内核的浏览器，必须加上`-webkit`前缀。
 
 `flex-shrink`属性定义了项目的缩小比例，默认为1，即如果空间不足，该项目将缩小。
 
-![](images/Flex布局/4-2-1.png)
+![](images/Flex布局/4-3-1.png)
 
 如果所有项目的`flex-shrink`属性都为1，当空间不足时，都将等比例缩小。
 如果一个项目的`flex-shrink`属性为0，其他项目都为1，则空间不足时，前者不缩小。
@@ -175,6 +175,8 @@ Webkit 内核的浏览器，必须加上`-webkit`前缀。
 
 `align-self`属性允许单个项目有与其他项目不一样的对齐方式，可覆盖`align-items`属性。
 默认值为`auto`，表示继承父元素的`align-items`属性，如果没有父元素，则等同于`stretch`。
+
+![](images/Flex布局/4-6-1.png)
 
 
 ## 参考链接
