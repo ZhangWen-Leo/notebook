@@ -198,95 +198,219 @@ x1.then(onResolve)
 
 ```javascript
 // 写法wen
-function Bromise(executor) {
-   this.funcList = [];
-   this.then = (onResolve = null, onReject = null) => {
-      if (onResolve !== null && typeof onResolve !== "function") {
-         throw new Error("onResolve必须是函数！");
-      }
-      if (onReject !== null && typeof onReject !== "function") {
-         throw new Error("onReject必须是函数！");
-      }
-      this.funcList.push([onResolve, onReject]);
-      return this;
-   };
-   this.catch = (errFunc = null) => {
-      if (errFunc !== null && typeof errFunc !== "function") {
-         throw new Error("传入errFunc的参数必须是函数！");
-      }
-      else {
-         this.funcList.push([null, errFunc]);
-      }
-      return this;
-   };
-   this.finally = (finalFunc = null) => {
-      if (finalFunc !== null && typeof finalFunc !== "function") {
-         throw new Error("传入finalFunc的参数必须是函数！");
-      }
-      else {
-         this.funcList.push(finalFunc);
-      }
-      return this;
-   }
-   function resolve(value) {
-      let doneFunc = nextFunc(0);
-      if (doneFunc) {
-         resolve(doneFunc(value));
-      }
-   }
-   function reject(error) {
-      let errFunc = nextFunc(1);
-      if (errFunc) {
-         resolve(errFunc(error));
-      }
-      else {
-         throw new Error("Uncaight (in Bromise) " + error);
-      }
-   }
-   let nextFunc = (value = 0) => {
-      while (this.funcList.length > 0) {
-         if (typeof this.funcList[0] === "function") {
-            this.funcList[0]();
+const PENDING = "PENDING";
+const FULFILLED = "FULFILLED";
+const REJECTED = "REJECTED";
+
+class Bromise {
+   constructor(executor) {
+      this.state = PENDING;
+      this.value = undefined;
+      this.reason = undefined;
+      this.onResolvedCallbacks = [];
+      this.onRejectedCallbacks = [];
+
+      const resolve = (value) => {
+         if (this.state === PENDING) {
+            this.state = FULFILLED;
+            this.value = value;
+            this.onResolvedCallbacks.forEach(fn => fn());
          }
-         else if (this.funcList[0][value ? 1 : 0]) {
-            break;
+      }
+
+      const reject = (reason) => {
+         if (this.state === PENDING) {
+            this.state = REJECTED;
+            this.reason = reason;
+            this.onRejectedCallbacks.forEach(fn => fn());
          }
-         this.funcList.shift();
       }
-      if (this.funcList.length > 0) {
-         return this.funcList.shift()[value];
-      }
-      else {
-         return null;
-      }
-   }
-   let tryAndCatch = (fn, ...args) => {
+
       try {
-         fn(...args);
+         executor(resolve, reject);
       } catch (error) {
          reject(error);
       }
    }
 
-   setTimeout(() => {
-      tryAndCatch(executor, resolve.bind(this), reject.bind(this));
-   }, 0);
+   then(onFulFilled, onRejected) {
+      onFulFilled = typeof onFulFilled === "function" ? onFulFilled : value => value;
+      onRejected = typeof onRejected === "function" ? onRejected : err => { throw err; };
+
+      const bromise2 = new Bromise((resolve, reject) => {
+         if (this.state === PENDING) {
+            this.onResolvedCallbacks.push(() => {
+               setTimeout(() => {
+                  try {
+                     const x = onFulFilled(this.value);
+                     resolveBromise(bromise2, x, resolve, reject);
+                  } catch (error) {
+                     reject(error);
+                  }
+               }, 0);
+            });
+            this.onRejectedCallbacks.push(() => {
+               setTimeout(() => {
+                  try {
+                     const x = onRejected(this.reason);
+                     resolveBromise(bromise2, x, resolve, reject);
+                  } catch (error) {
+                     reject(error);
+                  }
+               }, 0);
+            });
+         }
+
+         if (this.state === FULFILLED) {
+            setTimeout(() => {
+               try {
+                  const x = onFulFilled(this.value);
+                  resolveBromise(bromise2, x, resolve, reject);
+               } catch (error) {
+                  reject(error);
+               }
+            }, 0);
+         }
+
+         if (this.state === REJECTED) {
+            setTimeout(() => {
+               try {
+                  const x = onRejected(this.reason);
+                  resolveBromise(bromise2, x, resolve, reject);
+               } catch (error) {
+                  reject(error);
+               }
+            }, 0);
+         }
+      });
+
+      return bromise2;
+   }
+
+   catch(onRejected) {
+      this.then(null, onRejected);
+   }
+
+   finally(fn) {
+      return this.then(
+              value => Bromise.resolve(fn()).then(() => value),
+              reason => Bromise.resolve(fn()).then(() => {throw reason})
+      );
+   }
 }
-// test
-new Bromise((resolve, reject) => {
-    // resolve(1);
-    reject(1);
-}).then((value) => {
-    console.log("then1 resolve " + value);
-}, (error) => {
-    console.log("then1 reject " + error);
-}).then((value) => {
-    console.log("then2 resolve " + value);
-}, (error) => {
-    console.log("then2 reject " + error);
-}).catch((error) => {
-    console.log("catch" + error);
-});
+
+resolveBromise = (bromise2, x, resolve, reject) => {
+   if (x === bromise2) {
+      return reject(new TypeError("type error!"));
+   }
+
+   let hasCalled = false;
+
+   if (x !== null && (typeof x === "object" || typeof x === "function")) {
+      try {
+         const then = x.then;
+
+         if (typeof then === "function") {
+            then.call(
+                    x,
+                    value => {
+                       if (!hasCalled) {
+                          hasCalled = true;
+                          resolveBromise(bromise2, value, resolve, reject);
+                       }
+                    },
+                    reason => {
+                       if (!hasCalled) {
+                          hasCalled = true;
+                          reject(reason);
+                       }
+                    }
+            );
+         }
+         else {
+            resolve(x);
+         }
+      } catch (error) {
+         if (!hasCalled) {
+            hasCalled = true;
+            reject(error);
+         }
+      }
+   }
+   else {
+      resolve(x);
+   }
+}
+
+Bromise.resolve = (bromise) => {
+   if (bromise instanceof Bromise) {
+      return bromise;
+   }
+
+   return new Bromise((resolve, reject) => {
+      if (bromise && bromise.then && typeof bromise.then === "function") {
+         setTimeout(() => {
+            bromise.then(resolve, reject);
+         }, 0);
+      }
+      else {
+         resolve(bromise);
+      }
+   })
+}
+
+Bromise.all = (bromises) => new Bromise((resolve, reject) => {
+   let bromisesResolveCounter = 0;
+   const len = bromises.length;
+   let bromisesResolveValues = new Array(len);
+
+   for (let i = 0; i < len; i++) {
+      bromises[i].then(
+              (value) => {
+                 bromisesResolveCounter++;
+                 bromisesResolveValues[i] = value;
+                 if (bromisesResolveCounter === len) {
+                    resolve(bromisesResolveValues);
+                 }
+              },
+              (reason) => reject(reason)
+      );
+   }
+})
+
+Bromise.race = (bromises) => new Bromise((resolve, reject) => {
+   const len = bromises.length;
+   for (let i = 0; i < len; i++) {
+      Bromise.resolve(bromises[i]).then(
+              value => resolve(value),
+              reason => reject(reason)
+      );
+   }
+})
+
+const func = (value) => (resolve, reject) => {
+   new Promise((resolve, reject) => {
+      resolve(value);
+   }).then((value) => {
+      resolve(value);
+   })
+}
+
+// const bromise = new Bromise(func).then((value) => {
+//   console.log("then 1 " + value);
+//   return 100;
+// }).then((value) => {
+//   console.log("then 2 " + value);
+//   return 101;
+// })
+
+// bromise.then((value) => {
+//   console.log("then 1.1 " + value);
+//   return 2;
+// })
+
+Bromise.all([new Bromise(func(1)), new Bromise(func(2)), new Bromise(func(3))]).then((value) => console.log(value));
+Bromise.race([new Bromise(func(1)), new Bromise(func(2)), new Bromise(func(3))]).then((value) => console.log(value));
 ```
 ```javascript
 // A+规范
@@ -516,16 +640,16 @@ BBromise.all = promises => {
       for (let i = 0; i < promiseNum; i += 1) {
          (i => {
             BBromise.resolve(promises[i]).then(
-                    value => {
-                       resolvedCounter++;
-                       resolvedValues[i] = value;
-                       if (resolvedCounter === promiseNum) {
-                          return resolve(resolvedValues);
-                       }
-                    },
-                    reason => {
-                       return reject(reason);
-                    },
+               value => {
+                  resolvedCounter++;
+                  resolvedValues[i] = value;
+                  if (resolvedCounter === promiseNum) {
+                     return resolve(resolvedValues);
+                  }
+               },
+               reason => {
+                  return reject(reason);
+               },
             );
          })(i);
       }
@@ -540,14 +664,14 @@ BBromise.race = promises => {
       } else {
          for (let i = 0, l = promises.length; i < l; i += 1) {
             BBromise.resolve(promises[i]).then(
-                    data => {
-                       resolve(data);
-                       return;
-                    },
-                    err => {
-                       reject(err);
-                       return;
-                    },
+               data => {
+                  resolve(data);
+                  return;
+               },
+               err => {
+                  reject(err);
+                  return;
+               },
             );
          }
       }
