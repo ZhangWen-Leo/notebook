@@ -70,10 +70,15 @@ Webkit 内核的浏览器，必须加上`-webkit`前缀。
 
 它可能取三个值:
 - `nowrap`（默认）：不换行。
+  
   ![](images/Flex布局/3-2-1.png)
+  
 - `wrap`：换行，第一行在上方。
+  
   ![](images/Flex布局/3-2-2.png)
+  
 - `wrap-reverse`：换行，第一行在下方。
+  
   ![](images/Flex布局/3-2-3.png)
 
 ### 3. flex-flow
